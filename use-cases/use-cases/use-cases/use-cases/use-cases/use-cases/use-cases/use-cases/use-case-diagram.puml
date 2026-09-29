@@ -1,0 +1,25 @@
+@startuml
+
+left to right direction
+
+actor "HR Advisor" as HR
+actor "Department Manager" as Manager
+
+rectangle "HR System" {
+
+    usecase "Produce Salary Report" as SalaryReport
+    usecase "View Employee Details" as ViewEmployee
+    usecase "Add Employee" as AddEmployee
+    usecase "Update Employee Details" as UpdateEmployee
+    usecase "Delete Employee Details" as DeleteEmployee
+}
+
+HR --> SalaryReport
+HR --> ViewEmployee
+HR --> AddEmployee
+HR --> UpdateEmployee
+HR --> DeleteEmployee
+
+Manager --> SalaryReport
+
+@enduml
