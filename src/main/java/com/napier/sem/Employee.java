@@ -1,3 +1,4 @@
+
 package com.napier.sem;
 
 public class Employee
@@ -7,6 +8,6 @@ public class Employee
     public String last_name;
     public String title;
     public int salary;
-    public String dept_name;
-    public String manager;
+    public Department dept;
+    public Employee manager;
 }
