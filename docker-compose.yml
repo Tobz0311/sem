@@ -1,13 +1,9 @@
 version: '3'
-
 services:
-  # Application Dockerfile is in same folder
   app:
     build: .
-
-  # Database Dockerfile is in db folder
   db:
     build: db/.
     restart: always
     ports:
-      - "33601:3306"
+      - "33060:3306"

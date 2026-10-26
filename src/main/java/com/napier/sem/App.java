@@ -1,4 +1,3 @@
-
 package com.napier.sem;
 
 import java.sql.Connection;
@@ -6,26 +5,85 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 
 public class App
 {
     Connection con = null;
 
-    public void connect()
+    public void connect(String location, int delay)
     {
         try
         {
-            con = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:33601/employees?allowPublicKeyRetrieval=true&useSSL=false",
-                    "root",
-                    "example"
-            );
-
-            System.out.println("Connected to database");
+            // Load Database driver
+            Class.forName("com.mysql.cj.jdbc.Driver");
         }
-        catch (SQLException e)
+        catch (ClassNotFoundException e)
+        {
+            System.out.println("Could not load SQL driver");
+            System.exit(-1);
+        }
+
+        int retries = 10;
+        for (int i = 0; i < retries; ++i)
+        {
+            System.out.println("Connecting to database...");
+            try
+            {
+                // Wait a bit for db to start
+                Thread.sleep(delay);
+                // Connect to database
+                con = DriverManager.getConnection("jdbc:mysql://" + location
+                                + "/employees?allowPublicKeyRetrieval=true&useSSL=false",
+                        "root", "example");
+                System.out.println("Successfully connected");
+                break;
+            }
+            catch (SQLException sqle)
+            {
+                System.out.println("Failed to connect to database attempt " + Integer.toString(i));
+                System.out.println(sqle.getMessage());
+            }
+            catch (InterruptedException ie)
+            {
+                System.out.println("Thread interrupted? Should not happen.");
+            }
+        }
+    }
+
+    public void disconnect()
+    {
+        if (con != null)
+        {
+            try
+            {
+                con.close();
+                System.out.println("Disconnected from database");
+            }
+            catch (SQLException e)
+            {
+                System.out.println("Error closing connection to database");
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    public void addEmployee(Employee emp)
+    {
+        try
+        {
+            Statement stmt = con.createStatement();
+            String strUpdate =
+                    "INSERT INTO employees (emp_no, first_name, last_name, birth_date, gender, hire_date) " +
+                            "VALUES (" + emp.emp_no + ", '" + emp.first_name + "', '" + emp.last_name + "', " +
+                            "'9999-01-01', 'M', '9999-01-01')";
+            stmt.execute(strUpdate);
+        }
+        catch (Exception e)
         {
             System.out.println(e.getMessage());
+            System.out.println("Failed to add employee");
         }
     }
 
@@ -225,13 +283,15 @@ public class App
         return null;
     }
 
-    public void getSalariesByDepartment(Department dept)
+    public ArrayList<Employee> getSalariesByDepartment(Department dept)
     {
         if (dept == null)
         {
             System.out.println("Department not found");
-            return;
+            return null;
         }
+
+        ArrayList<Employee> employees = new ArrayList<Employee>();
 
         try
         {
@@ -251,12 +311,12 @@ public class App
 
             while (rs.next())
             {
-                System.out.println(
-                        rs.getInt("emp_no") + " " +
-                                rs.getString("first_name") + " " +
-                                rs.getString("last_name") + " " +
-                                rs.getInt("salary")
-                );
+                Employee emp = new Employee();
+                emp.emp_no = rs.getInt("emp_no");
+                emp.first_name = rs.getString("first_name");
+                emp.last_name = rs.getString("last_name");
+                emp.salary = rs.getInt("salary");
+                employees.add(emp);
             }
 
             rs.close();
@@ -266,108 +326,49 @@ public class App
         {
             System.out.println(e.getMessage());
         }
+
+        return employees;
     }
 
-    public void getAllSalaries()
+    public void printSalaries(ArrayList<Employee> employees)
     {
-        try
+        if (employees == null)
         {
-            PreparedStatement ps = con.prepareStatement(
-                    "SELECT e.emp_no, e.first_name, e.last_name, s.salary " +
-                            "FROM employees e " +
-                            "JOIN salaries s ON e.emp_no = s.emp_no " +
-                            "WHERE s.to_date = '9999-01-01' " +
-                            "ORDER BY e.emp_no"
-            );
-
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next())
-            {
-                System.out.println(
-                        rs.getInt("emp_no") + " " +
-                                rs.getString("first_name") + " " +
-                                rs.getString("last_name") + " " +
-                                rs.getInt("salary")
-                );
-            }
-
-            rs.close();
-            ps.close();
-        }
-        catch (SQLException e)
-        {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public void printSalaries(Department dept)
-    {
-        getSalariesByDepartment(dept);
-    }
-
-    public void displayEmployee(Employee emp)
-    {
-        if (emp == null)
-        {
-            System.out.println("Employee not found");
+            System.out.println("No employees to print");
             return;
         }
 
-        System.out.println("Employee ID: " + emp.emp_no);
-        System.out.println("Name: " + emp.first_name + " " + emp.last_name);
-        System.out.println("Title: " + emp.title);
-        System.out.println("Salary: " + emp.salary);
-
-        if (emp.dept != null)
-        {
-            System.out.println("Department: " + emp.dept.dept_name);
-        }
-
-        if (emp.manager != null)
+        for (Employee emp : employees)
         {
             System.out.println(
-                    "Manager: " + emp.manager.first_name + " " +
-                            emp.manager.last_name
+                    emp.emp_no + " " +
+                            emp.first_name + " " +
+                            emp.last_name + " " +
+                            emp.salary
             );
         }
     }
 
     public static void main(String[] args)
     {
-        App app = new App();
-        app.connect();
+        // Create new Application and connect to database
+        App a = new App();
 
-        if (app.con == null)
-        {
-            System.out.println("Could not connect to database");
-            return;
+        if(args.length < 1){
+            a.connect("localhost:33060", 30000);
+        }else{
+            a.connect(args[0], Integer.parseInt(args[1]));
         }
 
-        Department dept = app.getDepartment("Sales");
-
+        Department dept = a.getDepartment("Development");
         if (dept != null)
         {
-            System.out.println("Department: " + dept.dept_name);
-
-            if (dept.manager != null)
-            {
-                System.out.println(
-                        "Manager: " + dept.manager.first_name + " " +
-                                dept.manager.last_name
-                );
-            }
-
-            app.getSalariesByDepartment(dept);
+            ArrayList<Employee> employees = a.getSalariesByDepartment(dept);
+            // Print salary report
+            a.printSalaries(employees);
         }
 
-        try
-        {
-            app.con.close();
-        }
-        catch (SQLException e)
-        {
-            System.out.println(e.getMessage());
-        }
+        // Disconnect from database
+        a.disconnect();
     }
 }
