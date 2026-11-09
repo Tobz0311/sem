@@ -1,3 +1,4 @@
+
 package com.napier.sem;
 
 import java.sql.Connection;
@@ -16,7 +17,6 @@ public class App
     {
         try
         {
-            // Load Database driver
             Class.forName("com.mysql.cj.jdbc.Driver");
         }
         catch (ClassNotFoundException e)
@@ -31,9 +31,7 @@ public class App
             System.out.println("Connecting to database...");
             try
             {
-                // Wait a bit for db to start
                 Thread.sleep(delay);
-                // Connect to database
                 con = DriverManager.getConnection("jdbc:mysql://" + location
                                 + "/employees?allowPublicKeyRetrieval=true&useSSL=false",
                         "root", "example");
@@ -330,6 +328,21 @@ public class App
         return employees;
     }
 
+    public void displayEmployee(Employee emp)
+    {
+        if (emp == null)
+        {
+            System.out.println("No employee to display");
+            return;
+        }
+
+        System.out.println("Employee Number: " + emp.emp_no);
+        System.out.println("First Name: " + emp.first_name);
+        System.out.println("Last Name: " + emp.last_name);
+        System.out.println("Title: " + emp.title);
+        System.out.println("Salary: " + emp.salary);
+    }
+
     public void printSalaries(ArrayList<Employee> employees)
     {
         if (employees == null)
@@ -351,12 +364,14 @@ public class App
 
     public static void main(String[] args)
     {
-        // Create new Application and connect to database
         App a = new App();
 
-        if(args.length < 1){
-            a.connect("localhost:33060", 30000);
-        }else{
+        if (args.length < 1)
+        {
+            a.connect("localhost:33601", 30000);
+        }
+        else
+        {
             a.connect(args[0], Integer.parseInt(args[1]));
         }
 
@@ -364,11 +379,9 @@ public class App
         if (dept != null)
         {
             ArrayList<Employee> employees = a.getSalariesByDepartment(dept);
-            // Print salary report
             a.printSalaries(employees);
         }
 
-        // Disconnect from database
         a.disconnect();
     }
 }
