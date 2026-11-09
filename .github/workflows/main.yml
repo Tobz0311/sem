@@ -1,11 +1,10 @@
-
-name: A workflow for my Hello World App
+name: Java CI with Maven
 
 on:
   push:
     branches:
       - master
-      - lab08
+      - Lab8
       - main
 
 permissions:
@@ -30,6 +29,13 @@ jobs:
       - name: Unit Tests
         run: mvn -Dtest=com.napier.sem.AppTest test
 
+      - name: CodeCov
+        uses: codecov/codecov-action@v2
+        with:
+          directory: ./target/site/jacoco
+          flags: Unit Tests
+          verbose: true
+
   IntegrationTests:
     name: Integration Tests
     runs-on: ubuntu-22.04
@@ -45,7 +51,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Integration Tests and CodeCov
+      - name: Integration Tests
         run: |
           docker build -t database ./db
           docker run --name employees -dp 33601:3306 database
@@ -62,7 +68,7 @@ jobs:
           verbose: true
 
   build:
-    name: Build and Deploy Release
+    name: Build Run in Docker and Deploy Release
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -83,6 +89,7 @@ jobs:
 
       - name: Copy Output
         run: |
+          mkdir -p reports
           APP_CONTAINER=$(docker compose ps -aq app)
           docker cp "$APP_CONTAINER:/tmp/reports/." ./reports/
 
@@ -92,8 +99,7 @@ jobs:
           branch: reports
           folder: reports
 
-      - name: Deploy Release
-        uses: marvinpinto/action-automatic-releases@latest
+      - uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
