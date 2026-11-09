@@ -8,6 +8,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class App
 {
@@ -40,7 +43,7 @@ public class App
             }
             catch (SQLException sqle)
             {
-                System.out.println("Failed to connect to database attempt " + Integer.toString(i));
+                System.out.println("Failed to connect to database attempt " + i);
                 System.out.println(sqle.getMessage());
             }
             catch (InterruptedException ie)
@@ -328,6 +331,85 @@ public class App
         return employees;
     }
 
+    public ArrayList<Employee> getSalariesByRole(String role)
+    {
+        ArrayList<Employee> employees = new ArrayList<Employee>();
+
+        try
+        {
+            PreparedStatement ps = con.prepareStatement(
+                    "SELECT e.emp_no, e.first_name, e.last_name, s.salary " +
+                            "FROM employees e " +
+                            "JOIN titles t ON e.emp_no = t.emp_no " +
+                            "JOIN salaries s ON e.emp_no = s.emp_no " +
+                            "WHERE t.title = ? " +
+                            "AND t.to_date = '9999-01-01' " +
+                            "AND s.to_date = '9999-01-01' " +
+                            "ORDER BY e.emp_no"
+            );
+
+            ps.setString(1, role);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next())
+            {
+                Employee emp = new Employee();
+                emp.emp_no = rs.getInt("emp_no");
+                emp.first_name = rs.getString("first_name");
+                emp.last_name = rs.getString("last_name");
+                emp.salary = rs.getInt("salary");
+                emp.title = role;
+
+                employees.add(emp);
+            }
+
+            rs.close();
+            ps.close();
+        }
+        catch (SQLException e)
+        {
+            System.out.println(e.getMessage());
+        }
+
+        return employees;
+    }
+
+    public void outputEmployees(ArrayList<Employee> employees, String filename)
+    {
+        if (employees == null)
+        {
+            System.out.println("No employees to write");
+            return;
+        }
+
+        StringBuilder report = new StringBuilder();
+
+        report.append("# Manager Salaries Report\n\n");
+        report.append("| Employee Number | First Name | Last Name | Salary |\n");
+        report.append("|---|---|---|---:|\n");
+
+        for (Employee emp : employees)
+        {
+            report.append("| ")
+                    .append(emp.emp_no).append(" | ")
+                    .append(emp.first_name).append(" | ")
+                    .append(emp.last_name).append(" | ")
+                    .append(emp.salary).append(" |\n");
+        }
+
+        try
+        {
+            Files.createDirectories(Path.of("reports"));
+            Files.writeString(Path.of("reports", filename), report.toString());
+            System.out.println("Report created: reports/" + filename);
+        }
+        catch (IOException e)
+        {
+            System.out.println("Failed to create report");
+            System.out.println(e.getMessage());
+        }
+    }
+
     public void displayEmployee(Employee emp)
     {
         if (emp == null)
@@ -375,12 +457,9 @@ public class App
             a.connect(args[0], Integer.parseInt(args[1]));
         }
 
-        Department dept = a.getDepartment("Development");
-        if (dept != null)
-        {
-            ArrayList<Employee> employees = a.getSalariesByDepartment(dept);
-            a.printSalaries(employees);
-        }
+        ArrayList<Employee> employees = a.getSalariesByRole("Manager");
+
+        a.outputEmployees(employees, "ManagerSalaries.md");
 
         a.disconnect();
     }

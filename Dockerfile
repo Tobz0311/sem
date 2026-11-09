@@ -1,3 +1,4 @@
+
 FROM amazoncorretto:17
 COPY ./target/devops.jar /tmp
 WORKDIR /tmp
